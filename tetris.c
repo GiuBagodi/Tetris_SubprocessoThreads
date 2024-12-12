@@ -1,3 +1,14 @@
+/*
+    Curso de Ciencia da Computacao
+    PUC Minas Pocos de Caldas - MG / 2024
+    Disciplina de Sistemas Operacionais
+    Alunos: Giulia Bagodi e Mateus Pereira
+
+    para compilar em ambiente Linux:
+    gcc -Wall tetris.c -o tetris -pthread
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> // Para usleep
@@ -34,6 +45,7 @@ const char* get_piece_color(int value) {
 void clear_screen();
 void print_title();
 void print_board();
+void print_gameover();
 void clear_piece();
 void draw_piece();
 void move_piece(int board[LINHAS][COLUNAS], int piece[4][4], int *x, int *y, char key);
@@ -86,6 +98,7 @@ int main() {
     if (pid == -1) {
         perror("fork");
         exit(EXIT_FAILURE);
+        
     } else if (pid == 0) {
         close(pipe1[0]); // Fecha o descritor de leitura do pipe1 no processo filho
         close(pipe2[1]); // Fecha o descritor de escrita do pipe2 no processo filho
@@ -96,19 +109,21 @@ int main() {
         close(pipe1[1]); // Fecha o descritor de escrita do pipe1 no processo filho
         close(pipe2[0]); // Fecha o descritor de leitura do pipe2 no processo filho
         _exit(0);
+        
     } else {
         close(pipe1[1]); // Fecha o descritor de escrita do pipe1 no processo pai
         close(pipe2[0]); // Fecha o descritor de leitura do pipe2 no processo pai
         char buffer[128];
+        
         while (1) {
             read(pipe1[0], buffer, sizeof(buffer)); // Aguarda mensagem de game over
             clear_screen();
-            printf("*********************************\n");
-            printf("*                               *\n");
-            printf("*        GAME OVER!             *\n");
-            printf("*                               *\n");
-            printf("*********************************\n");
+            print_gameover();
             printf("\nPressione 'r' para reiniciar ou 'q' para sair.\n");
+            printf("\nFeito por: Giulia Bagodi e Mateus Pereira.\n");
+            printf("\nCurso de Ciencia da Computacao");
+            printf("\nDisciplina de Sistemas Operacionais");
+            printf("\nPUC Minas - Pocos de Caldas, 2024\n");
 
             char choice = getchar();
             if (choice == 'r') {
@@ -146,6 +161,8 @@ void logica_jogo(int board[LINHAS][COLUNAS], int pieces[7][4][4], Piece *p, int 
             draw_piece(board, p->piece, p->posX, p->posY);
             print_title();
             print_board(board);
+            printf("\nTeclas para movimentar: a s d w\n");
+            printf("Para sair aperte 'q'\n");
             printf("\nPosicao atual: (%d, %d)\n", p->posX, p->posY);
             printf("\nScore: %d\n", *score);
             clear_piece(board, p->piece, p->posX, p->posY);
@@ -237,7 +254,34 @@ void print_title() {
             printf("\033[1;36m|\033[0m\n");
         }
         printf("\n\n");
-    }
+}
+
+void print_gameover() {
+
+    int gameover[10][12] = {
+        {2, 2, 2, 0, 1, 0, 4, 0, 4, 3, 3, 3},
+        {2, 0, 0, 1, 0, 1, 4, 4, 4, 3, 0, 0},
+        {2, 0, 2, 1, 1, 1, 4, 0, 4, 3, 3, 3},
+        {2, 0, 2, 1, 0, 1, 4, 0, 4, 3, 0, 0},
+        {2, 2, 2, 1, 0, 1, 4, 0, 4, 3, 3, 3},
+        {6, 6, 6, 5, 0, 5, 2, 2, 2, 6, 6, 6},
+        {6, 0, 6, 5, 0, 5, 2, 0, 0, 6, 0, 6},
+        {6, 0, 6, 5, 0, 5, 2, 2, 2, 6, 6, 0},
+        {6, 0, 6, 5, 0, 5, 2, 0, 0, 6, 0, 6},
+        {6, 6, 6, 0, 5, 0, 2, 2, 2, 6, 0, 6}
+    
+    };
+
+    printf("\n\n");
+    for (int i = 0; i < 10; i++) {
+            printf("\033[1;36m    |\033[0m");
+            for (int j = 0; j < 12; j++) {
+                printf("%s%d \033[0m", get_piece_color(gameover[i][j]), gameover[i][j]);
+            }
+            printf("\033[1;36m|\033[0m\n");
+        }
+        printf("\n\n");
+}
 
 /*
     Funcao para limpar a peca da matriz
@@ -368,10 +412,6 @@ void initializePieces(int pieces[7][4][4]) {
     memcpy(pieces[6], L, sizeof(L));
 }
 
-
-
-
-
 // Funcao para gerar uma peca aleatoria
 Piece generateRandomPiece(int pieces[7][4][4]) {
     Piece new_piece;
@@ -411,7 +451,6 @@ void rotate_piece(int piece[4][4]) {
     }
 }
 
-
 int check_collision(int board[LINHAS][COLUNAS], int piece[4][4], int x, int y) {
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -433,7 +472,6 @@ int check_collision(int board[LINHAS][COLUNAS], int piece[4][4], int x, int y) {
     }
     return 0; // Sem colisoes
 }
-
 
 int can_rotate(int board[LINHAS][COLUNAS], int piece[4][4], int x, int y) {
     int rotated[4][4] = {0};
@@ -490,6 +528,7 @@ int check_complete_lines(int board[LINHAS][COLUNAS], int *score) {
 
     return complete_lines;
 }
+
 void remove_line(int board[LINHAS][COLUNAS], int line) {
     for (int i = line; i > 0; i--) {
         for (int j = 1; j < COLUNAS - 1; j++) { // Ignora bordas laterais
@@ -502,7 +541,6 @@ void remove_line(int board[LINHAS][COLUNAS], int line) {
         board[0][j] = 0;
     }
 }
-
 
 // Configurar terminal para modo nao-canonico
 void enable_raw_mode() {
